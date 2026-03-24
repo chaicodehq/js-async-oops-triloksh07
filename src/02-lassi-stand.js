@@ -72,16 +72,72 @@
  *   isLassiStand({});                       // => false
  */
 export function LassiStand(name, city) {
-  // Your code here
+  this.name = name;
+  this.city = city;
+  this.menu = [];
+  this.orders = [];
+  this._nextOrderId = 1;
 }
 
-// Add prototype methods here:
-// LassiStand.prototype.addFlavor = function(flavor, price) { ... }
-// LassiStand.prototype.takeOrder = function(customerName, flavor, quantity) { ... }
-// LassiStand.prototype.completeOrder = function(orderId) { ... }
-// LassiStand.prototype.getRevenue = function() { ... }
-// LassiStand.prototype.getMenu = function() { ... }
+// prototype methods:
+LassiStand.prototype.addFlavor = function (flavor, price) {
+
+  // better approach
+  if (this.menu.some(e => e.flavor === flavor) || price <= 0) return -1;
+
+  // for (const e of this.menu) {
+  //   if (flavor === e.flavor) return -1;
+  // }
+  const result = this.menu.push({ flavor, price });
+  return result;
+}
+
+LassiStand.prototype.takeOrder = function (customerName, flavor, quantity) {
+  const item = this.menu.find(e => e.flavor === flavor);
+  if (!item || quantity <= 0) return -1;
+
+  const total = item.price * quantity;
+
+  const order = {
+    id: this._nextOrderId,
+    customer: customerName,
+    flavor,
+    quantity,
+    total,
+    status: "pending",
+  }
+
+  this.orders.push(order);
+  this._nextOrderId++;
+
+  return order.id;
+}
+
+LassiStand.prototype.completeOrder = function (orderId) {
+  const order = this.orders.find(e => e.id === orderId);
+
+  if (!order || order.status === "completed") return false;
+
+  order.status = "completed";
+
+  return true;
+}
+
+LassiStand.prototype.getRevenue = function () {
+  // const completedOrders = this.orders
+  //   .filter(e => e.status === "completed")
+  //   .reduce((acc, { total }) => acc + total, 0);
+  return this.orders.reduce((acc, e) => e.status === "completed" ? acc + e.total : acc, 0);
+}
+
+LassiStand.prototype.getMenu = function () {
+  // const menuShallowCopy = [...this.menu];
+  const menuDeepCopy = this.menu.map(e => ({ ...e }));
+  return menuDeepCopy;
+}
 
 export function isLassiStand(obj) {
-  // Your code here
+  // return obj && typeof obj.addFlavor === "function" && Array.isArray(obj.menu);
+
+  return obj instanceof LassiStand;
 }
