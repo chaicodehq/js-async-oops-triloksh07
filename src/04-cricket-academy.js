@@ -140,7 +140,7 @@ export class Player {
   }
 
   train(hours) {
-    if (!hours || Number.isNaN(hours) || hours <= 0) return -1;
+    if (hours <= 0 || Number.isNaN(hours)) return -1;
     return this.trainingHours += hours;
   }
 
@@ -149,89 +149,102 @@ export class Player {
   }
 }
 
+// Batsman extends Player and tracks batting performance.
+// Keeps both innings history and running totals so stats can be calculated efficiently.
 export class Batsman extends Player {
   constructor(name, age, team, battingStyle) {
     super(name, age, team);
     this.battingStyle = battingStyle;
+
+    // store every innings so we have match history and detailed stats later
     this.innings = [];
+
+    // running totals so we don’t have to loop through innings every time
+    this.totalRuns = 0;
+    this.totalBalls = 0;
+
+    // we keep sum of strike rates to calculate average strike rate quickly
+    this.totalStrikeRate = 0;
   }
 
   playInnings(runs, balls) {
-    if (!runs || !balls || Number.isNaN(runs) || Number.isNaN(balls) || runs < 0 || balls <= 0) return null;
+    if (runs < 0 || balls <= 0 || Number.isNaN(runs) || Number.isNaN(balls)) return null;
 
-    const strikeRate = this.strikeRate = (runs / balls) * 100;
-    this.innings.push({ runs, balls, strikeRate });
+    const strikeRate = (runs / balls) * 100;
+    const innings = { runs, balls, strikeRate };
 
-    const innings = {
-      balls,
-      runs,
-      strikeRate,
-    }
+    this.totalRuns += runs;
+    this.totalBalls += balls;
+    this.totalStrikeRate += strikeRate;
+
+    this.innings.push(innings);
+
     return innings;
   }
 
   getStrikeRate() {
     if (this.innings.length === 0) return 0;
-
-    const avgStrikeRate = (this.innings.reduce((acc, { strikeRate }) => acc + strikeRate, 0) / this.innings.length);
-
-    return avgStrikeRate;
+    return this.totalStrikeRate / this.innings.length;
   }
 
   getProfile() {
-
-    const totalRuns = this.innings.reduce((acc, i) => acc + i.runs, 0);
-
     const profile = {
       ...super.getProfile(),
       battingStyle: this.battingStyle,
-      totalRuns,
+      totalRuns: this.totalRuns,
       inningsPlayed: this.innings.length,
+      role: "batsman",
     };
 
-    profile.role = "batsman";
 
     return profile;
   }
 }
 
+// Bowler extends Player and tracks bowling spells.
+// Uses running totals to avoid recalculating stats from scratch every time.
 export class Bowler extends Player {
   constructor(name, age, team, bowlingStyle) {
     super(name, age, team);
     this.bowlingStyle = bowlingStyle;
     this.spells = [];
+
+    // running totals for quick stats calculation without looping spells
+    this.totalWickets = 0;
+    this.totalRunsConceded = 0;
+    this.totalOvers = 0;
+
+    // sum of economies so we can compute average economy per spell
+    this.totalEconomy = 0;
   }
 
   bowlSpell(wickets, runsConceded, overs) {
-    if (!wickets || !runsConceded || !overs || Number.isNaN(wickets) || Number.isNaN(runsConceded) || Number.isNaN(overs) || wickets < 0 || runsConceded < 0 || overs <= 0) return null;
+    if (wickets < 0 || runsConceded < 0 || overs <= 0 || Number.isNaN(wickets) || Number.isNaN(runsConceded) || Number.isNaN(overs)) return null;
 
     const economy = runsConceded / overs;
-    this.spells.push({ wickets, runsConceded, overs, economy })
 
-    const spell = {
-      wickets,
-      runsConceded,
-      overs,
-      economy,
-    }
+    this.totalRunsConceded += runsConceded;
+    this.totalOvers += overs;
+    this.totalWickets += wickets;
+    this.totalEconomy += economy;
+
+    const spell = { wickets, runsConceded, overs, economy };
+
+    this.spells.push(spell);
 
     return spell;
   }
 
   getEconomy() {
     if (this.spells.length === 0) return 0;
-    const avgEconomy = this.spells.reduce((acc, { economy }) => acc + economy, 0) / this.spells.length;
-
-    return avgEconomy;
+    return this.totalEconomy / this.spells.length;
   }
 
   getProfile() {
-    const totalWickets = this.spells.reduce((acc, { wickets }) => acc + wickets, 0);
-
     const profile = {
       ...super.getProfile(),
       bowlingStyle: this.bowlingStyle,
-      totalWickets,
+      totalWickets: this.totalWickets,
       spellsBowled: this.spells.length,
       role: "bowler"
     };
@@ -240,71 +253,76 @@ export class Bowler extends Player {
   }
 }
 
+// AllRounder combines both batting and bowling stats.
+// Maintains separate histories and aggregates for both roles.
 export class AllRounder extends Player {
   constructor(name, age, team, battingStyle, bowlingStyle) {
     super(name, age, team);
+
     this.battingStyle = battingStyle;
     this.bowlingStyle = bowlingStyle;
+
+    // keep full history of batting and bowling performance
     this.innings = [];
     this.spells = [];
+
+    // running totals for performance metrics
+    this.totalRuns = 0;
+    this.totalBalls = 0;
+
+    // we store sums so averages can be calculated in O(1) instead of looping arrays
+    this.totalStrikeRate = 0; //  average strike rate per innings
+    this.totalWickets = 0;
+    this.totalEconomy = 0; //  average economy per spell
   }
 
   playInnings(runs, balls) {
-    if (!runs || !balls || Number.isNaN(runs) || Number.isNaN(balls) || runs < 0 || balls <= 0) return null;
+    if (runs < 0 || balls <= 0 || Number.isNaN(runs) || Number.isNaN(balls)) return null;
 
-    const strikeRate = this.strikeRate = (runs / balls) * 100;
-    this.innings.push({ runs, balls, strikeRate });
+    const strikeRate = (runs / balls) * 100;
+    const innings = { runs, balls, strikeRate };
 
-    const innings = {
-      balls,
-      runs,
-      strikeRate,
-    }
+    this.totalRuns += runs;
+    this.totalBalls += balls;
+    this.totalStrikeRate += strikeRate;
+
+    this.innings.push(innings);
+
     return innings;
   }
 
   bowlSpell(wickets, runsConceded, overs) {
-    if (!wickets || !runsConceded || !overs || Number.isNaN(wickets) || Number.isNaN(runsConceded) || Number.isNaN(overs) || wickets < 0 || runsConceded < 0 || overs <= 0) return null;
+    if (wickets < 0 || runsConceded < 0 || overs <= 0 || Number.isNaN(wickets) || Number.isNaN(runsConceded) || Number.isNaN(overs)) return null;
 
     const economy = runsConceded / overs;
-    this.spells.push({ wickets, runsConceded, overs, economy })
+    const spell = { wickets, runsConceded, overs, economy };
 
-    const spell = {
-      wickets,
-      runsConceded,
-      overs,
-      economy,
-    }
+    this.totalWickets += wickets;
+    this.totalEconomy += economy;
+
+    this.spells.push(spell);
 
     return spell;
   }
 
   getStrikeRate() {
     if (this.innings.length === 0) return 0;
-
-    const avgStrikeRate = (this.innings.reduce((acc, { strikeRate }) => acc + strikeRate, 0) / this.innings.length);
-
-    return avgStrikeRate;
+    return this.totalStrikeRate / this.innings.length;
   }
 
   getEconomy() {
     if (this.spells.length === 0) return 0;
-    const avgEconomy = this.spells.reduce((acc, i) => acc + i.economy, 0) / this.spells.length;
-
-    return avgEconomy;
+    return this.totalEconomy / this.spells.length;
   }
 
   getProfile() {
-    const totalWickets = this.spells.reduce((acc, { wickets }) => acc + wickets, 0);
-    const totalRuns = this.innings.reduce((acc, { runs }) => acc + runs, 0);
-
     const profile = {
       ...super.getProfile(),
       battingStyle: this.battingStyle,
       bowlingStyle: this.bowlingStyle,
-      totalRuns,
+      totalRuns: this.totalRuns,
+      totalWickets: this.totalWickets,
       inningsPlayed: this.innings.length,
-      totalWickets,
       spellsBowled: this.spells.length,
       role: "allrounder"
     };
