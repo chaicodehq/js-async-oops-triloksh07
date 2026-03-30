@@ -92,34 +92,84 @@ export class HaveliSecurity {
   #maxResidents;
 
   constructor(haveliName, passcode, maxResidents) {
-    // Your code here
+    this.haveliName = haveliName;
+    this.#passcode = passcode;
+    this.#residents = [];
+    this.#accessLog = [];
+    this.#maxResidents = maxResidents;
   }
 
   addResident(name, role, passcode) {
-    // Your code here
+    const exists = this.#residents.some((r) => r.name === name);
+    if (exists) return { success: false, message: "Already a resident!" };
+
+    if (role !== "malik" && role !== "naukar" && role !== "mehmaan") return { success: false, message: "Invalid role!" };
+
+    if (this.#passcode !== passcode) return { success: false, message: "Galat passcode!" };
+
+    if (this.#residents.length >= this.#maxResidents) return { success: false, message: "Haveli full hai!" };
+
+    const newResidentDetails = { name, role, addedAt: new Date().toISOString() };
+
+    this.#residents.push(newResidentDetails);
+
+    return { success: true, message: `${name} ab haveli ka ${role} hai!` };
+
   }
 
   removeResident(name, passcode) {
-    // Your code here
+    if (this.#passcode !== passcode) return { success: false, message: "Galat passcode!" };
+
+    // const exists = this.#residents.some(e => e.name === name);
+    const exists = this.#residents.some(r => r.name === name ? delete this.#residents.name : e.name === name);
+
+    if (!exists) return { success: false, message: "Resident nahi mila!" };
+
+
+    return { success: true, message: `${name} ko haveli se nikal diya!` };
   }
 
   verifyAccess(name) {
-    // Your code here
+    const exists = this.#residents.some(r => r.name === name);
+    const entry = { name, time: new Date().toISOString(), allowed: false };
+    if (!exists) {
+      this.#accessLog.push(entry);
+      return { allowed: false, message: "Aapka entry allowed nahi hai!" }
+    };
+
+    entry.allowed = true;
+    this.#accessLog.push(entry);
+
+    return { allowed: true, message: `Swagat hai ${name}!` };
   }
 
   getAccessLog(passcode) {
-    // Your code here
+    // this.#passcode === passcode ? [] : null;
+    if (this.#passcode !== passcode) return null;
+    const accessLogCopy = [...this.#accessLog];
+
+    return accessLogCopy;
   }
 
   changePasscode(oldPasscode, newPasscode) {
-    // Your code here
+    if (this.#passcode !== oldPasscode) return { success: false, message: "Purana passcode galat hai!" };
+
+    if (newPasscode.length < 4) return { success: false, message: "Naya passcode bahut chhota hai!" };
+
+    this.#passcode = newPasscode;
+
+    return { success: true, message: "Passcode badal diya!" };
   }
 
   getResidentCount() {
-    // Your code here
+    // this.#residents ? this.#residents.length : 0
+    const residentNum = this.#residents.length;
+    return residentNum;
   }
 
   isResident(name) {
-    // Your code here
+    // this.#residents.some(r => r.name === name)
+    const isExists = this.#residents.some(r => r.name === name);
+    return isExists;
   }
 }
