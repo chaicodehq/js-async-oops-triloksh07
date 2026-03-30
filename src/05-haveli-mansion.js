@@ -90,6 +90,15 @@ export class HaveliSecurity {
   #residents;
   #accessLog;
   #maxResidents;
+  #success(message) {
+    return { success: true, message };
+  };
+  #fail(message) {
+    return { success: false, message };
+  }
+  #isAllowed(enabled = false, message) {
+    return { allowed: enabled, message };
+  }
 
   constructor(haveliName, passcode, maxResidents) {
     this.haveliName = haveliName;
@@ -101,32 +110,35 @@ export class HaveliSecurity {
 
   addResident(name, role, passcode) {
     const exists = this.#residents.some((r) => r.name === name);
-    if (exists) return { success: false, message: "Already a resident!" };
+    if (exists) return this.#fail("Already a resident!");
 
-    if (role !== "malik" && role !== "naukar" && role !== "mehmaan") return { success: false, message: "Invalid role!" };
+    const validRoles = ["malik", "naukar", "mehmaan"];
+    if (!validRoles.includes(role)) return { success: false, message: "Invalid role!" };
 
-    if (this.#passcode !== passcode) return { success: false, message: "Galat passcode!" };
+    if (this.#passcode !== passcode) return this.#fail("Galat passcode!");
 
-    if (this.#residents.length >= this.#maxResidents) return { success: false, message: "Haveli full hai!" };
+    if (this.#residents.length >= this.#maxResidents) return this.#fail("Haveli full hai!");
 
     const newResidentDetails = { name, role, addedAt: new Date().toISOString() };
 
     this.#residents.push(newResidentDetails);
 
-    return { success: true, message: `${name} ab haveli ka ${role} hai!` };
+    return this.#success(`${name} ab haveli ka ${role} hai!`);
 
   }
 
   removeResident(name, passcode) {
-    if (this.#passcode !== passcode) return { success: false, message: "Galat passcode!" };
+    if (this.#passcode !== passcode)
+      return this.#fail("Galat passcode!");
 
-    // const exists = this.#residents.some(e => e.name === name);
-    const exists = this.#residents.some(r => r.name === name ? delete this.#residents.name : e.name === name);
+    const index = this.#residents.findIndex(r => r.name === name);
 
-    if (!exists) return { success: false, message: "Resident nahi mila!" };
+    if (index === -1)
+      return { success: false, message: "Resident nahi mila!" };
 
+    this.#residents.splice(index, 1);
 
-    return { success: true, message: `${name} ko haveli se nikal diya!` };
+    return this.#success(`${name} ko haveli se nikal diya!`);
   }
 
   verifyAccess(name) {
@@ -134,41 +146,37 @@ export class HaveliSecurity {
     const entry = { name, time: new Date().toISOString(), allowed: false };
     if (!exists) {
       this.#accessLog.push(entry);
-      return { allowed: false, message: "Aapka entry allowed nahi hai!" }
+      return this.#isAllowed(false, "Aapka entry allowed nahi hai!");
     };
 
     entry.allowed = true;
     this.#accessLog.push(entry);
 
-    return { allowed: true, message: `Swagat hai ${name}!` };
+    return this.#isAllowed(true, `Swagat hai ${name}!`);
   }
 
   getAccessLog(passcode) {
-    // this.#passcode === passcode ? [] : null;
     if (this.#passcode !== passcode) return null;
-    const accessLogCopy = [...this.#accessLog];
-
-    return accessLogCopy;
+    return structuredClone(this.#accessLog);
   }
 
   changePasscode(oldPasscode, newPasscode) {
-    if (this.#passcode !== oldPasscode) return { success: false, message: "Purana passcode galat hai!" };
+    if (this.#passcode !== oldPasscode)
+      return this.#fail("Purana passcode galat hai!");
 
-    if (newPasscode.length < 4) return { success: false, message: "Naya passcode bahut chhota hai!" };
+    if (newPasscode.length < 4)
+      return this.#fail("Naya passcode bahut chhota hai!");
 
     this.#passcode = newPasscode;
 
-    return { success: true, message: "Passcode badal diya!" };
+    return this.#success("Passcode badal diya!");
   }
 
   getResidentCount() {
-    // this.#residents ? this.#residents.length : 0
-    const residentNum = this.#residents.length;
-    return residentNum;
+    return this.#residents.length;
   }
 
   isResident(name) {
-    // this.#residents.some(r => r.name === name)
     const isExists = this.#residents.some(r => r.name === name);
     return isExists;
   }
